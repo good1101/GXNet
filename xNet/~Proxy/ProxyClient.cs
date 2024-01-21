@@ -45,6 +45,7 @@ namespace xNet
                 return _type;
             }
         }
+        public string UserAgent { get; set; }
 
         /// <summary>
         /// Возвращает или задаёт хост прокси-сервера.

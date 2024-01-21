@@ -208,6 +208,8 @@ namespace xNet
         /// <value>Значение по умолчанию — <see langword="null"/>.</value>
         public static ProxyClient GlobalProxy { get; set; }
 
+        public bool IsUpdateCookies { get; set; }
+
         #endregion
 
 
@@ -640,7 +642,7 @@ namespace xNet
         /// </summary>
         /// <value>Значение по умолчанию — <see langword="null"/>.</value>
         /// <remarks>Куки могут изменяться ответом от HTTP-сервера. Чтобы не допустить этого, нужно установить свойство <see cref="xNet.Net.CookieDictionary.IsLocked"/> равным <see langword="true"/>.</remarks>
-        public CookieDictionary Cookies { get; set; }
+        public CookieCollection Cookies { get; set; }
 
         #endregion
 
@@ -2067,7 +2069,7 @@ namespace xNet
             if (Cookies == null)
                 return false;
 
-            return Cookies.ContainsKey(name);
+            return Cookies.Contains(name);
         }
 
         #region Работа с заголовками
@@ -2583,6 +2585,7 @@ namespace xNet
             {
                 try
                 {
+                    _currentProxy.UserAgent = UserAgent;
                     tcpClient = _currentProxy.CreateConnection(host, port);
                 }
                 catch (ProxyException ex)
@@ -2615,7 +2618,7 @@ namespace xNet
                         sslStream = new SslStream(_connectionNetworkStream, false, SslCertificateValidatorCallback);
                     }
 
-                    sslStream.AuthenticateAsClient(address.Host);
+                    sslStream.AuthenticateAsClient(address.Host, null, SslProtocols.Tls12 , true);
                     _connectionCommonStream = sslStream;
                 }
                 catch (Exception ex)
@@ -2662,7 +2665,7 @@ namespace xNet
             string query;
 
             if (_currentProxy != null &&
-                (_currentProxy.Type == ProxyType.Http || _currentProxy.Type == ProxyType.Chain))
+                (_currentProxy.Type == ProxyType.HTTP || _currentProxy.Type == ProxyType.Chain))
             {
                 query = Address.AbsoluteUri;
             }
@@ -2684,12 +2687,13 @@ namespace xNet
             var headers = GenerateCommonHeaders(method, contentLength, contentType);
 
             MergeHeaders(headers, _permanentHeaders);
-
+            if (EnableEncodingContent)
+                headers["Accept-Encoding"] = "gzip, deflate";
             if (_temporaryHeaders != null && _temporaryHeaders.Count > 0)
                 MergeHeaders(headers, _temporaryHeaders);
 
             if (Cookies != null && Cookies.Count != 0 && !headers.ContainsKey("Cookie"))
-                headers["Cookie"] = Cookies.ToString();
+                headers["Cookie"] = Cookies.GetHeaders(Address.Host);
 
             return ToHeadersString(headers);
         }
@@ -2711,7 +2715,7 @@ namespace xNet
 
             HttpProxyClient httpProxy = null;
 
-            if (_currentProxy != null && _currentProxy.Type == ProxyType.Http)
+            if (_currentProxy != null && _currentProxy.Type == ProxyType.HTTP)
             {
                 httpProxy = _currentProxy as HttpProxyClient;
             }
@@ -2750,8 +2754,6 @@ namespace xNet
 
             #region Content
 
-            if (EnableEncodingContent)
-                headers["Accept-Encoding"] = "gzip,deflate";
 
             if (Culture != null)
                 headers["Accept-Language"] = GetLanguageHeader();
@@ -2847,7 +2849,7 @@ namespace xNet
             // В приоритете найти прокси, который требует авторизацию.
             foreach (var proxy in chainProxy.Proxies)
             {
-                if (proxy.Type == ProxyType.Http)
+                if (proxy.Type == ProxyType.HTTP)
                 {
                     foundProxy = proxy as HttpProxyClient;
 

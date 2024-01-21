@@ -10,6 +10,7 @@ namespace xNet
 
         Continue = 100,
         SwitchingProtocols = 101,
+        EarlyHints =103,
 
         OK = 200,
         Created = 201,

@@ -51,7 +51,7 @@ namespace xNet
         /// <param name="username">Имя пользователя для авторизации на прокси-сервере.</param>
         /// <param name="password">Пароль для авторизации на прокси-сервере.</param>
         public HttpProxyClient(string host, int port, string username, string password)
-            : base(ProxyType.Http, host, port, username, password) { }
+            : base(ProxyType.HTTP, host, port, username, password) { }
 
         #endregion
 
@@ -68,7 +68,7 @@ namespace xNet
         /// <exception cref="System.FormatException">Формат порта является неправильным.</exception>
         public static HttpProxyClient Parse(string proxyAddress)
         {
-            return ProxyClient.Parse(ProxyType.Http, proxyAddress) as HttpProxyClient;
+            return ProxyClient.Parse(ProxyType.HTTP, proxyAddress) as HttpProxyClient;
         }
 
         /// <summary>
@@ -81,7 +81,7 @@ namespace xNet
         {
             ProxyClient proxy;
 
-            if (ProxyClient.TryParse(ProxyType.Http, proxyAddress, out proxy))
+            if (ProxyClient.TryParse(ProxyType.HTTP, proxyAddress, out proxy))
             {
                 result = proxy as HttpProxyClient;
                 return true;
@@ -143,7 +143,6 @@ namespace xNet
             #endregion
 
             TcpClient curTcpClient = tcpClient;
-
             if (curTcpClient == null)
             {
                 curTcpClient = CreateConnectionToProxy();
@@ -157,7 +156,7 @@ namespace xNet
                 {
                     NetworkStream nStream = curTcpClient.GetStream();
 
-                    SendConnectionCommand(nStream, destinationHost, destinationPort);
+                    SendConnectionCommand(nStream, destinationHost, destinationPort, base.UserAgent);
                     statusCode = ReceiveResponse(nStream);
                 }
                 catch (Exception ex)
@@ -202,16 +201,20 @@ namespace xNet
             return string.Empty;
         }
 
-        private void SendConnectionCommand(NetworkStream nStream, string destinationHost, int destinationPort)
+        private void SendConnectionCommand(NetworkStream nStream, string destinationHost, int destinationPort, string userAgent = null)
         {
             var commandBuilder = new StringBuilder();
 
             commandBuilder.AppendFormat("CONNECT {0}:{1} HTTP/1.1\r\n", destinationHost, destinationPort);
+            commandBuilder.Append("Connection: keep-alive\r\n");
+            if(userAgent != null)
+            commandBuilder.AppendFormat("User-Agent: {0}\r\n", userAgent);
+
             commandBuilder.AppendFormat(GenerateAuthorizationHeader());
+            
             commandBuilder.AppendLine();
 
             byte[] buffer = Encoding.ASCII.GetBytes(commandBuilder.ToString());
-
             nStream.Write(buffer, 0, buffer.Length);
         }
 

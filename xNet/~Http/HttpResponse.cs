@@ -79,6 +79,13 @@ namespace xNet
                 Position = 0;
             }
 
+            public string ReadAllHeaders()
+            {
+                var buffer = new byte[_buffer.Length];
+               
+                return Encoding.ASCII.GetString(_buffer, 0, _buffer.Length);
+            }
+
             public string ReadLine()
             {
                 _linePosition = 0;
@@ -453,7 +460,7 @@ namespace xNet
         /// Возвращает куки, образовавшиеся в результате запроса, или установленные в <see cref="xNet.Net.HttpRequest"/>.
         /// </summary>
         /// <remarks>Если куки были установлены в <see cref="xNet.Net.HttpRequest"/> и значение свойства <see cref="xNet.Net.CookieDictionary.IsLocked"/> равно <see langword="true"/>, то будут созданы новые куки.</remarks>
-        public CookieDictionary Cookies { get; private set; }
+        public CookieCollection Cookies { get; private set; }
 
         /// <summary>
         /// Возвращает время простаивания постоянного соединения в миллисекундах.
@@ -865,7 +872,7 @@ namespace xNet
                 return false;
             }
 
-            return Cookies.ContainsKey(name);
+            return Cookies.Contains(name);
         }
 
         /// <summary>
@@ -978,7 +985,7 @@ namespace xNet
             if (_request.Cookies != null && !_request.Cookies.IsLocked)
                 Cookies = _request.Cookies;
             else
-                Cookies = new CookieDictionary();
+                Cookies = new CookieCollection();
 
             if (_receiverHelper == null)
             {
@@ -992,7 +999,7 @@ namespace xNet
             {
                 ReceiveStartingLine();
                 ReceiveHeaders();
-
+                var tx = _receiverHelper.ReadAllHeaders();
                 RedirectAddress = GetLocation();
                 CharacterSet = GetCharacterSet();
                 ContentLength = GetContentLength();
@@ -1083,6 +1090,14 @@ namespace xNet
 
             StatusCode = (HttpStatusCode)Enum.Parse(
                 typeof(HttpStatusCode), statusCode);
+            //Пропускаем чтость http заголовков 103
+            if(StatusCode ==  HttpStatusCode.EarlyHints)
+            {
+                ReceiveHeaders();
+                _headers.Clear();
+                _rawCookies.Clear();
+                ReceiveStartingLine();
+            }
         }
 
         private void SetCookie(string value)
@@ -1100,12 +1115,14 @@ namespace xNet
 
             if (separatorPos == -1)
             {
+                return;
                 string message = string.Format(
                     Resources.HttpException_WrongCookie, value, Address.Host);
 
                 throw NewHttpException(message);
             }
 
+            string cookieDomain;
             string cookieValue;
             string cookieName = value.Substring(0, separatorPos);
 
@@ -1149,18 +1166,26 @@ namespace xNet
                 }
 
                 #endregion
-            }
 
-            // Если куки нужно удалить.
-            if (cookieValue.Length == 0 ||
-                cookieValue.Equals("deleted", StringComparison.OrdinalIgnoreCase))
-            {
-                Cookies.Remove(cookieName);
+
+
             }
+            var keyDomain = "domain=";
+            var keyDomain2 = "Domain=";
+            var keyDomain3 = "DOMAIN=";
+            string keyd = "";
+            if (value.Contains(keyDomain))
+                keyd = keyDomain;
+            else if (value.Contains(keyDomain2))
+                keyd = keyDomain2;
+            else if (value.Contains(keyDomain3))
+                keyd = keyDomain3;
+            if(keyd != "")
+                cookieDomain = value.FindValue(keyd, ";");
             else
-            {
-                Cookies[cookieName] = cookieValue;
-            }
+                cookieDomain = null;
+
+            Cookies.SetCookie(new System.Net.Cookie(cookieName, cookieValue, "", cookieDomain));
 
             _rawCookies[cookieName] = value;
         }
@@ -1300,7 +1325,15 @@ namespace xNet
 
             while (true)
             {
-                int bytesRead = stream.Read(buffer, 0, bufferSize);
+                int bytesRead = 0;
+                try
+                {
+                    bytesRead  = stream.Read(buffer, 0, bufferSize);
+                }
+                catch(Exception e)
+                {
+
+                }
 
                 // Если тело сообщения представляет HTML.
                 if (isHtml)

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Threading.Tasks;
 
 namespace xNet
 {
@@ -114,6 +115,12 @@ namespace xNet
             }
         }
 
+
+        public override System.Threading.Tasks.Task WriteToAsynk(Stream stream)
+        {
+            throw new NotImplementedException();
+        }
+
         #endregion
 
 
@@ -138,5 +145,6 @@ namespace xNet
                 throw new ObjectDisposedException("StreamContent");
             }
         }
+
     }
 }

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace xNet
 {
@@ -430,6 +431,11 @@ namespace xNet
             {
                 throw new ObjectDisposedException("MultipartContent");
             }
+        }
+
+        public override Task WriteToAsynk(Stream stream)
+        {
+            throw new NotImplementedException();
         }
 
         #endregion

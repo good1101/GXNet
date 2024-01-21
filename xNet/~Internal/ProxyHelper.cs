@@ -5,13 +5,13 @@ namespace xNet
     internal static class ProxyHelper
     {
         public static ProxyClient CreateProxyClient(ProxyType proxyType, string host = null,
-            int port = 0, string username = null, string password = null)
+            int port = 0, string username = null, string password = null, string userAgent = null)
         {
             switch (proxyType)
             {
-                case ProxyType.Http:
+                case ProxyType.HTTP:
                     return (port == 0) ?
-                        new HttpProxyClient(host) : new HttpProxyClient(host, port, username, password);
+                        new HttpProxyClient(host) : new HttpProxyClient(host, port, username, password) ;
 
                 case ProxyType.Socks4:
                     return (port == 0) ?

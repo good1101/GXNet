@@ -1,5 +1,5 @@
 ﻿using System.IO;
-
+using System.Threading.Tasks;
 namespace xNet
 {
     /// <summary>
@@ -40,6 +40,8 @@ namespace xNet
         /// </summary>
         /// <param name="stream">Поток, куда будут записаны данные тела запроса.</param>
         public abstract void WriteTo(Stream stream);
+
+        public abstract Task WriteToAsynk(Stream stream);
 
         /// <summary>
         /// Освобождает все ресурсы, используемые текущим экземпляром класса <see cref="HttpContent"/>.

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Threading.Tasks;
 
 namespace xNet
 {
@@ -114,6 +115,13 @@ namespace xNet
             stream.Write(_content, _offset, _count);
         }
 
+        public override async Task WriteToAsynk(Stream stream)
+        {
+            await stream.WriteAsync(_content, _offset, _count);
+        }
+        
         #endregion
+
+
     }
 }
